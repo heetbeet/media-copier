@@ -10,7 +10,7 @@ class dotdict(dict):
     
     Examples
     --------
-    >>> a = DotDict(val1=1)
+    >>> a = dotdict(val1=1)
     >>> a.val2 = 2
     >>> a
     {'val1': 1, 'val2': 2}
