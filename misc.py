@@ -92,20 +92,19 @@ def get_video_ext():
         
     return vid_ext
 
-def save_jupyter_as_py(filename, outfilename=None):
+def save_jupyter_as_bash(filename, outfilename=None):
+    if filename[-6:].lower() != '.ipynb':
+        raise ValueError('Filename must end with .ipynb', filename)
+    pyname = filename[:-6]+'.py'
+    bashname = filename[:-6]
+        
     subprocess.call(['jupyter', 'nbconvert', '--to', 'script', filename])
     
-    #if filename[-6:].lower() != '.ipynb':
-    #    raise ValueError('Filename must end with .ipynb', filename)
-        
-    #if outfilename is None:
-    #    outfilename = filename[:-6]+'.py'
-    #    
-    #try:
-    #    os.remove(outfilename)
-    #except: pass
-    #os.rename(filename, outfilename)
-
+    with open(bashname, 'w') as f:
+        f.write(open(pyname).read())
+    try:
+        os.remove(pyname)
+    except: pass
 
 if __name__ == "__main__":
     import misc

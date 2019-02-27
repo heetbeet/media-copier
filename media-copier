@@ -1,11 +1,21 @@
 
 # coding: utf-8
 
-# In[7]:
+# In[11]:
 
+
+#!/bin/bash
+""" " 2>/dev/null 
+# Run python in inf loop
+while true; do python3 $0 "${@}"; sleep 0.1; done
+" """
 
 #requirements psutils termcolor tqdm
 #apt-get install ntfs-3g
+#
+# TODO list: 
+# 1) double storage of filelogger (maybe on rasberry)
+
 
 #gnome-terminal --full-screen on startup
 import drive_utils
@@ -29,48 +39,52 @@ if misc.jupyter_mode():
     misc.save_jupyter_as_py('media-copier.ipynb')
 
 
-# In[17]:
+# In[2]:
 
 
 vid_ext = misc.get_video_ext()
 poll = drive_utils.drivePollster()
-events      = True #
-copy_done   = False
-countdown   = 1
 
+status = misc.dotdict(
+    terminated = False,
+    uncopied = 0)
+
+countdown    = 1
 
 for ii in range(1000):
+     
+    #--------------------------------------------------------
+    #Get all the drive logic ready
+    drives = drive_utils.get_drives()
+    hdd = None
+
+    #Use largest USB drive as harddrive
+    for drive in drives:
+        if drive_utils.is_usb_drive(drive.device):
+            if hdd is None:
+                hdd = drive
+            elif drive.size_total > hdd.size_total:
+                hdd = drive
+
+    #Use smaller USB drive as SSD
+    ssd = None
+    for i in drives:
+        if (drive_utils.is_usb_drive(i.device)
+            and not i==hdd):
+            ssd = i
+    
     #--------------------------------------------------------
     #Triggers: when devices are plugged in/out
     if poll.did_change() or ii==0: 
-        copy_done = False
+        status.terminated = False
+        status.uncopied = 0
         start = time.time()
-        
-        drives = drive_utils.get_drives()
-        max_usb = None
-
-        #Use largest USB harddrive
-        for drive in drives:
-            if drive_utils.is_usb_drive(drive.device):
-                if max_usb is None:
-                    max_usb = drive
-                elif drive.size_total > max_usb.size_total:
-                    max_usb = drive
-
-        #Use others as SSD
-        ssd = None
-        for i in drives:
-            if (drive_utils.is_usb_drive(i.device)
-                and not i==max_usb):
-                
-                ssd = i
-    
     
     #--------------------------------------------------------
     # Crude color display
     termwriter.cls()
     cols, lines = shutil.get_terminal_size((80, 20))
-    if not (max_usb and ssd):
+    if not (hdd and ssd):
         printterm(col('+'+"-"*(cols-2)+'+', "red"))
         printterm(col(pline('', '|','|'), "red"))
 
@@ -99,17 +113,21 @@ for ii in range(1000):
         
         #printterm(col('+'+"-"*(cols-2)+'+', "cyan"))
         printterm(col(pline(' ---- Copy to: ----', '|','|'), "cyan"))
-        printterm(col(pline('   '+max_usb.mountpoint, '|','|'), "cyan"))
-        printterm(col(pline("     free:  %d GB"% (max_usb.size_free //(2**30)), '|','|'), 'cyan'))
-        printterm(col(pline("     total: %d GB"%(max_usb.size_total//(2**30)), '|','|'), 'cyan'))
+        printterm(col(pline('   '+hdd.mountpoint, '|','|'), "cyan"))
+        printterm(col(pline("     free:  %d GB"% (hdd.size_free //(2**30)), '|','|'), 'cyan'))
+        printterm(col(pline("     total: %d GB"%(hdd.size_total//(2**30)), '|','|'), 'cyan'))
         printterm(col('+'+"-"*(cols-2)+'+', "cyan"))
         
         
         #Do not copy if the routine is already finished
-        if copy_done:
+        if status.terminated:
             printterm()
-            printterm("SD card backup is complete!")
-            printterm("You may remove devices...")
+            if status.uncopied > 0:
+                printterm("SD card %.3fGB uncopied! Drive too full!"%(status.uncopied/2**30))
+                printterm("Replace harddrive...")
+            else:
+                printterm("SD card backup is complete!")
+                printterm("You may remove devices...")
             continue
         
         #--------------------------------------------------------
@@ -124,7 +142,7 @@ for ii in range(1000):
         # Do the copy
         printterm(" Scanning files:")
 
-        hdd_dir = os.path.join(max_usb.mountpoint, 'SD_autobackup')
+        hdd_dir = os.path.join(hdd.mountpoint, 'SD_autobackup')
 
         out_dir = os.path.join(hdd_dir,
                                datetime.now().strftime('%Y%m%d-')+
@@ -142,6 +160,7 @@ for ii in range(1000):
         sd_base = os.path.abspath(ssd.mountpoint)
         totsize = 0
         filecount = misc.dotdict(files=0, size=0, vidfiles=0, vidsize=0)
+        
         for _, dirs, files in os.walk(sd_base, followlinks=False):
             for file in files:
                 fpath = os.path.join(_, file)
@@ -164,8 +183,24 @@ for ii in range(1000):
         t.close()
         printterm('\r', end='')
 
+        available_space = hdd.size_free*0.9999 #leave 100kB tolerance for every 1GB
+        
         printterm('Uncopied videos %.2fGB; %d files.'%(filecount.vidsize/2**30, filecount.vidfiles))
         printterm('Uncopied others %.2fGB; %d files.'%(filecount.size/2**30, filecount.files))
+        
+        #Determine max space that can be occupied
+        if filecount.size > available_space:
+            size_fill = 0
+            size_left = 0
+            for key, attrs in newregister.items():
+                if size_fill + attrs.size < available_space:
+                    size_fill += attrs.size
+                else:
+                    size_left += attrs.size
+            
+            printterm('Warning!!! Full drive; %.3fGB files abandoned.'%(
+                (size_left)/2**30)+'%')
+            
         printterm()
 
         i=0
@@ -174,8 +209,13 @@ for ii in range(1000):
             i+=1
 
             src = attrs.path
-            #TODO: for some f*** reason os.path.join doesn't work here ???
-            # think it happens with files starting with a dot
+                
+            available_space -= attrs.size
+            if available_space<0:
+                status.uncopied += attrs.size
+                continue
+
+            # path.join breaks think it happens with files starting with a dot
             dest = os.path.abspath(out_dir +'/'+src[len(sd_base):])
             dest_dir = os.path.dirname(dest)
 
@@ -186,23 +226,17 @@ for ii in range(1000):
             for chunksz in copier.copy_with_progress(src, dest, keeps=keeps):
                 t.update(chunksz)
 
-            #shutil.copy2(src, dest)
-            #t.update(attrs.size)
 
             if copier.hash_equals(keeps.md5, copier.hash_file(dest)):
                 filelogger.update_fileregister(hdd_dir, attrs)
                 
-            
-                
-            #else:
-            #    print('biiiiig problems', src, dest)
 
         t.close()
         printterm('\r', end='')
         
-        misc.systxt(['eject', max_usb.mountpoint])
-        misc.systxt(['eject', ssd.mountpoint])
-        copy_done = True
+        #misc.systxt(['eject', hdd.mountpoint])
+        #misc.systxt(['eject', ssd.mountpoint])
+        status.terminated = True
 
         
     time.sleep(0.5)
