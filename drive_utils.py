@@ -37,13 +37,13 @@ def drive_id(sbx):
         return str_out[1].split('\n')[0].strip()
     
         
-def get_drives():
+def get_drives(exclude_mount=['/']):
     """Get a list of all drives on the system.
     
     Examples
     --------
     >>> sdb2 = None
-    >>> for i in get_drives():
+    >>> for i in get_drives([]):
     ...     if i.device == '/dev/sdb2':
     ...         sdb2 = i
     >>> sdb2.mountpoint
@@ -56,6 +56,8 @@ def get_drives():
     """
     drives = []
     for p in psutil.disk_partitions():
+        if p.mountpoint in exclude_mount:
+            continue
         #if is_usb_harddrive(p.device):
         p = dotdict(**p._asdict())
         (p.size_total, 
