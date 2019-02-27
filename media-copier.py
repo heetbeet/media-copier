@@ -1,10 +1,12 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[6]:
 
 
-#requirements psutils
+#requirements psutils termcolor tqdm
+#apt-get install ntfs-3g
+
 #gnome-terminal --full-screen on startup
 import drive_utils
 import termwriter 
@@ -190,6 +192,7 @@ for ii in range(1000):
             if copier.hash_equals(keeps.md5, copier.hash_file(dest)):
                 filelogger.update_fileregister(hdd_dir, attrs)
                 
+            
                 
             #else:
             #    print('biiiiig problems', src, dest)
@@ -197,6 +200,8 @@ for ii in range(1000):
         t.close()
         printterm('\r', end='')
         
+        misc.systxt(['eject', max_usb.mountpoint])
+        misc.systxt(['eject', ssd.mountpoint])
         copy_done = True
 
         
