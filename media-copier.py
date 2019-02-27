@@ -1,235 +1,204 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": 13,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#requirements psutils\n",
-    "#gnome-terminal --full-screen on startup\n",
-    "import drive_utils\n",
-    "import termwriter \n",
-    "import filelogger\n",
-    "import misc\n",
-    "import copier\n",
-    "from termwriter import *\n",
-    "\n",
-    "import os\n",
-    "from termcolor import colored as col\n",
-    "from tqdm import tqdm\n",
-    "import shutil\n",
-    "import time\n",
-    "from datetime import datetime\n",
-    "\n",
-    "if misc.jupyter_mode():\n",
-    "    tqdm.monitor_interval = 0\n",
-    "    get_ipython().run_line_magic('reload_ext', 'autoreload')\n",
-    "    get_ipython().run_line_magic('autoreload', '2')\n",
-    "    misc.save_jupyter_as_py('media-copier.ipynb')"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 17,
-   "metadata": {
-    "scrolled": true
-   },
-   "outputs": [],
-   "source": [
-    "vid_ext = misc.get_video_ext()\n",
-    "poll = drive_utils.drivePollster()\n",
-    "events      = True #\n",
-    "copy_done   = False\n",
-    "countdown   = 1\n",
-    "\n",
-    "\n",
-    "for ii in range(1000):\n",
-    "    #--------------------------------------------------------\n",
-    "    #Triggers: when devices are plugged in/out\n",
-    "    if poll.did_change() or ii==0: \n",
-    "        copy_done = False\n",
-    "        start = time.time()\n",
-    "        \n",
-    "        drives = drive_utils.get_drives()\n",
-    "        max_usb = None\n",
-    "\n",
-    "        #Use largest USB harddrive\n",
-    "        for drive in drives:\n",
-    "            if drive_utils.is_usb_drive(drive.device):\n",
-    "                if max_usb is None:\n",
-    "                    max_usb = drive\n",
-    "                elif drive.size_total > max_usb.size_total:\n",
-    "                    max_usb = drive\n",
-    "\n",
-    "        #Use others as SSD\n",
-    "        ssd = None\n",
-    "        for i in drives:\n",
-    "            if (drive_utils.is_usb_drive(i.device)\n",
-    "                and not i==max_usb):\n",
-    "                \n",
-    "                ssd = i\n",
-    "    \n",
-    "    \n",
-    "    #--------------------------------------------------------\n",
-    "    # Crude color display\n",
-    "    termwriter.cls()\n",
-    "    cols, lines = shutil.get_terminal_size((80, 20))\n",
-    "    if not (max_usb and ssd):\n",
-    "        printterm(col('+'+\"-\"*(cols-2)+'+', \"red\"))\n",
-    "        printterm(col(pline('', '|','|'), \"red\"))\n",
-    "\n",
-    "        printterm(\n",
-    "            (col('| Please insert ', 'red') + \n",
-    "             col('USB Hard drive ', 'cyan') + \n",
-    "             col('and ', 'red') + \n",
-    "             col('camera SSD ', 'green') +\n",
-    "             col('-\\|/'[ii%4], 'red') +\n",
-    "             ' '*cols\n",
-    "            )[:cols+9*5-1] + col('|', 'red')\n",
-    "        )\n",
-    "\n",
-    "        printterm(col(pline('', '|','|'), \"red\"))\n",
-    "        printterm(col('+'+\"-\"*(cols-2)+'+', \"red\"))\n",
-    "\n",
-    "    else:\n",
-    "        #--------------------------------------------------------\n",
-    "        # Copy from SSD to hard-drive\n",
-    "        printterm(col('+'+\"-\"*(cols-2)+'+', \"green\"))\n",
-    "        printterm(col(pline(' ---- Copy from: ----', '|','|'), \"green\"))\n",
-    "        printterm(col(pline('   '+ssd.mountpoint, '|','|'), \"green\"))\n",
-    "        printterm(col(pline(\"    free:  %d GB\"% (ssd.size_free //(2**30)), '|','|'), 'green'))\n",
-    "        printterm(col(pline(\"    total: %d GB\"%(ssd.size_total//(2**30)), '|','|'), 'green'))\n",
-    "        printterm(col('+'+\"-\"*(cols-2)+'+', \"green\"))\n",
-    "        \n",
-    "        #printterm(col('+'+\"-\"*(cols-2)+'+', \"cyan\"))\n",
-    "        printterm(col(pline(' ---- Copy to: ----', '|','|'), \"cyan\"))\n",
-    "        printterm(col(pline('   '+max_usb.mountpoint, '|','|'), \"cyan\"))\n",
-    "        printterm(col(pline(\"     free:  %d GB\"% (max_usb.size_free //(2**30)), '|','|'), 'cyan'))\n",
-    "        printterm(col(pline(\"     total: %d GB\"%(max_usb.size_total//(2**30)), '|','|'), 'cyan'))\n",
-    "        printterm(col('+'+\"-\"*(cols-2)+'+', \"cyan\"))\n",
-    "        \n",
-    "        \n",
-    "        #Do not copy if the routine is already finished\n",
-    "        if copy_done:\n",
-    "            printterm()\n",
-    "            printterm(\"SD card backup is complete!\")\n",
-    "            printterm(\"You may remove devices...\")\n",
-    "            continue\n",
-    "        \n",
-    "        #--------------------------------------------------------\n",
-    "        # Wait 20 second\n",
-    "        printterm()\n",
-    "        if (time.time()-start) < countdown:\n",
-    "            printterm(' %d s left to cancel (plug out device)...'%(\n",
-    "                countdown - (time.time()-start)))\n",
-    "            continue\n",
-    "            \n",
-    "        #--------------------------------------------------------\n",
-    "        # Do the copy\n",
-    "        printterm(\" Scanning files:\")\n",
-    "\n",
-    "        hdd_dir = os.path.join(max_usb.mountpoint, 'SD_autobackup')\n",
-    "\n",
-    "        out_dir = os.path.join(hdd_dir,\n",
-    "                               datetime.now().strftime('%Y%m%d-')+\n",
-    "                               copier.get_valid_filename(ssd.id)+'--%.1fGB'%(\n",
-    "                                   ssd.size_total/(2**30)))\n",
-    "\n",
-    "\n",
-    "        os.makedirs(hdd_dir, exist_ok=True)\n",
-    "\n",
-    "        fileregister = filelogger.get_fileregister(hdd_dir)\n",
-    "        newregister = {}\n",
-    "\n",
-    "\n",
-    "        t = tqdm(total=ssd.size_used, file=sysout, unit='B', unit_scale=True)\n",
-    "        sd_base = os.path.abspath(ssd.mountpoint)\n",
-    "        totsize = 0\n",
-    "        filecount = misc.dotdict(files=0, size=0, vidfiles=0, vidsize=0)\n",
-    "        for _, dirs, files in os.walk(sd_base, followlinks=False):\n",
-    "            for file in files:\n",
-    "                fpath = os.path.join(_, file)\n",
-    "                try:\n",
-    "                    key, attrs = filelogger.to_register(fpath)\n",
-    "                except FileNotFoundError:\n",
-    "                    pass\n",
-    "                    #print('File not found ', fpath)\n",
-    "                else:\n",
-    "                    if key not in fileregister:\n",
-    "                        newregister[key] = attrs\n",
-    "\n",
-    "                        filecount.files += 1\n",
-    "                        filecount.size  += attrs.size\n",
-    "                        if os.path.splitext(attrs.path)[-1] in vid_ext:\n",
-    "                            filecount.vidfiles += 1\n",
-    "                            filecount.vidsize  += attrs.size\n",
-    "\n",
-    "                t.update(attrs.size/2**30)\n",
-    "        t.close()\n",
-    "        printterm('\\r', end='')\n",
-    "\n",
-    "        printterm('Uncopied videos %.2fGB; %d files.'%(filecount.vidsize/2**30, filecount.vidfiles))\n",
-    "        printterm('Uncopied others %.2fGB; %d files)'%(filecount.size/2**30, filecount.files))\n",
-    "        printterm()\n",
-    "\n",
-    "        i=0\n",
-    "        t = tqdm(total=filecount.size, file=sysout, unit='B', unit_scale=True)\n",
-    "        for key, attrs in newregister.items():\n",
-    "            i+=1\n",
-    "\n",
-    "            src = attrs.path\n",
-    "            #TODO: for some f*** reason os.path.join doesn't work here ???\n",
-    "            # think it happens with files starting with a dot\n",
-    "            dest = os.path.abspath(out_dir +'/'+src[len(sd_base):])\n",
-    "            dest_dir = os.path.dirname(dest)\n",
-    "\n",
-    "            if not os.path.isdir(dest_dir):\n",
-    "                os.makedirs(dest_dir)\n",
-    "\n",
-    "            keeps = misc.dotdict()\n",
-    "            for chunksz in copier.copy_with_progress(src, dest, keeps=keeps):\n",
-    "                t.update(chunksz)\n",
-    "\n",
-    "            #shutil.copy2(src, dest)\n",
-    "            #t.update(attrs.size)\n",
-    "\n",
-    "            if copier.hash_equals(keeps.md5, copier.hash_file(dest)):\n",
-    "                filelogger.update_fileregister(hdd_dir, attrs)\n",
-    "                \n",
-    "                \n",
-    "            #else:\n",
-    "            #    print('biiiiig problems', src, dest)\n",
-    "\n",
-    "        t.close()\n",
-    "        printterm('\\r', end='')\n",
-    "        \n",
-    "        copy_done = True\n",
-    "\n",
-    "        \n",
-    "    time.sleep(0.5)"
-   ]
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.6.6"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 2
-}
+
+# coding: utf-8
+
+# In[ ]:
+
+
+#requirements psutils
+#gnome-terminal --full-screen on startup
+import drive_utils
+import termwriter 
+import filelogger
+import misc
+import copier
+from termwriter import *
+
+import os
+from termcolor import colored as col
+from tqdm import tqdm
+import shutil
+import time
+from datetime import datetime
+
+if misc.jupyter_mode():
+    tqdm.monitor_interval = 0
+    get_ipython().run_line_magic('reload_ext', 'autoreload')
+    get_ipython().run_line_magic('autoreload', '2')
+    misc.save_jupyter_as_py('media-copier.ipynb')
+
+
+# In[17]:
+
+
+vid_ext = misc.get_video_ext()
+poll = drive_utils.drivePollster()
+events      = True #
+copy_done   = False
+countdown   = 1
+
+
+for ii in range(1000):
+    #--------------------------------------------------------
+    #Triggers: when devices are plugged in/out
+    if poll.did_change() or ii==0: 
+        copy_done = False
+        start = time.time()
+        
+        drives = drive_utils.get_drives()
+        max_usb = None
+
+        #Use largest USB harddrive
+        for drive in drives:
+            if drive_utils.is_usb_drive(drive.device):
+                if max_usb is None:
+                    max_usb = drive
+                elif drive.size_total > max_usb.size_total:
+                    max_usb = drive
+
+        #Use others as SSD
+        ssd = None
+        for i in drives:
+            if (drive_utils.is_usb_drive(i.device)
+                and not i==max_usb):
+                
+                ssd = i
+    
+    
+    #--------------------------------------------------------
+    # Crude color display
+    termwriter.cls()
+    cols, lines = shutil.get_terminal_size((80, 20))
+    if not (max_usb and ssd):
+        printterm(col('+'+"-"*(cols-2)+'+', "red"))
+        printterm(col(pline('', '|','|'), "red"))
+
+        printterm(
+            (col('| Please insert ', 'red') + 
+             col('USB Hard drive ', 'cyan') + 
+             col('and ', 'red') + 
+             col('camera SSD ', 'green') +
+             col('-\|/'[ii%4], 'red') +
+             ' '*cols
+            )[:cols+9*5-1] + col('|', 'red')
+        )
+
+        printterm(col(pline('', '|','|'), "red"))
+        printterm(col('+'+"-"*(cols-2)+'+', "red"))
+
+    else:
+        #--------------------------------------------------------
+        # Copy from SSD to hard-drive
+        printterm(col('+'+"-"*(cols-2)+'+', "green"))
+        printterm(col(pline(' ---- Copy from: ----', '|','|'), "green"))
+        printterm(col(pline('   '+ssd.mountpoint, '|','|'), "green"))
+        printterm(col(pline("    free:  %d GB"% (ssd.size_free //(2**30)), '|','|'), 'green'))
+        printterm(col(pline("    total: %d GB"%(ssd.size_total//(2**30)), '|','|'), 'green'))
+        printterm(col('+'+"-"*(cols-2)+'+', "green"))
+        
+        #printterm(col('+'+"-"*(cols-2)+'+', "cyan"))
+        printterm(col(pline(' ---- Copy to: ----', '|','|'), "cyan"))
+        printterm(col(pline('   '+max_usb.mountpoint, '|','|'), "cyan"))
+        printterm(col(pline("     free:  %d GB"% (max_usb.size_free //(2**30)), '|','|'), 'cyan'))
+        printterm(col(pline("     total: %d GB"%(max_usb.size_total//(2**30)), '|','|'), 'cyan'))
+        printterm(col('+'+"-"*(cols-2)+'+', "cyan"))
+        
+        
+        #Do not copy if the routine is already finished
+        if copy_done:
+            printterm()
+            printterm("SD card backup is complete!")
+            printterm("You may remove devices...")
+            continue
+        
+        #--------------------------------------------------------
+        # Wait 20 second
+        printterm()
+        if (time.time()-start) < countdown:
+            printterm(' %d s left to cancel (plug out device)...'%(
+                countdown - (time.time()-start)))
+            continue
+            
+        #--------------------------------------------------------
+        # Do the copy
+        printterm(" Scanning files:")
+
+        hdd_dir = os.path.join(max_usb.mountpoint, 'SD_autobackup')
+
+        out_dir = os.path.join(hdd_dir,
+                               datetime.now().strftime('%Y%m%d-')+
+                               copier.get_valid_filename(ssd.id)+'--%.1fGB'%(
+                                   ssd.size_total/(2**30)))
+
+
+        os.makedirs(hdd_dir, exist_ok=True)
+
+        fileregister = filelogger.get_fileregister(hdd_dir)
+        newregister = {}
+
+
+        t = tqdm(total=ssd.size_used, file=sysout, unit='B', unit_scale=True)
+        sd_base = os.path.abspath(ssd.mountpoint)
+        totsize = 0
+        filecount = misc.dotdict(files=0, size=0, vidfiles=0, vidsize=0)
+        for _, dirs, files in os.walk(sd_base, followlinks=False):
+            for file in files:
+                fpath = os.path.join(_, file)
+                try:
+                    key, attrs = filelogger.to_register(fpath)
+                except FileNotFoundError:
+                    pass
+                    #print('File not found ', fpath)
+                else:
+                    if key not in fileregister:
+                        newregister[key] = attrs
+
+                        filecount.files += 1
+                        filecount.size  += attrs.size
+                        if os.path.splitext(attrs.path)[-1] in vid_ext:
+                            filecount.vidfiles += 1
+                            filecount.vidsize  += attrs.size
+
+                t.update(attrs.size/2**30)
+        t.close()
+        printterm('\r', end='')
+
+        printterm('Uncopied videos %.2fGB; %d files.'%(filecount.vidsize/2**30, filecount.vidfiles))
+        printterm('Uncopied others %.2fGB; %d files)'%(filecount.size/2**30, filecount.files))
+        printterm()
+
+        i=0
+        t = tqdm(total=filecount.size, file=sysout, unit='B', unit_scale=True)
+        for key, attrs in newregister.items():
+            i+=1
+
+            src = attrs.path
+            #TODO: for some f*** reason os.path.join doesn't work here ???
+            # think it happens with files starting with a dot
+            dest = os.path.abspath(out_dir +'/'+src[len(sd_base):])
+            dest_dir = os.path.dirname(dest)
+
+            if not os.path.isdir(dest_dir):
+                os.makedirs(dest_dir)
+
+            keeps = misc.dotdict()
+            for chunksz in copier.copy_with_progress(src, dest, keeps=keeps):
+                t.update(chunksz)
+
+            #shutil.copy2(src, dest)
+            #t.update(attrs.size)
+
+            if copier.hash_equals(keeps.md5, copier.hash_file(dest)):
+                filelogger.update_fileregister(hdd_dir, attrs)
+                
+                
+            #else:
+            #    print('biiiiig problems', src, dest)
+
+        t.close()
+        printterm('\r', end='')
+        
+        copy_done = True
+
+        
+    time.sleep(0.5)
+
