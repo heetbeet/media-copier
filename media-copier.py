@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[6]:
+# In[7]:
 
 
 #requirements psutils termcolor tqdm
@@ -160,12 +160,12 @@ for ii in range(1000):
                             filecount.vidfiles += 1
                             filecount.vidsize  += attrs.size
 
-                t.update(attrs.size/2**30)
+                t.update(attrs.size)
         t.close()
         printterm('\r', end='')
 
         printterm('Uncopied videos %.2fGB; %d files.'%(filecount.vidsize/2**30, filecount.vidfiles))
-        printterm('Uncopied others %.2fGB; %d files)'%(filecount.size/2**30, filecount.files))
+        printterm('Uncopied others %.2fGB; %d files.'%(filecount.size/2**30, filecount.files))
         printterm()
 
         i=0
