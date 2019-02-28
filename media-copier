@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[42]:
+# In[54]:
 
 
 #!/bin/bash
@@ -34,7 +34,7 @@ if misc.jupyter_mode():
     misc.save_jupyter_as_bash('media-copier.ipynb')
 
 
-# In[53]:
+# In[56]:
 
 
 vid_ext = misc.get_video_ext()
@@ -46,8 +46,10 @@ status = misc.dotdict(
 
 countdown    = 1
 
-for ii in range(1000):
-     
+ii=-1
+while(1):
+    ii+=1
+    
     #--------------------------------------------------------
     #Get all the drive logic ready
     drives = drive_utils.get_drives()
@@ -86,7 +88,7 @@ for ii in range(1000):
         printterm(c.RED, end='')
         writeterm("-"*cols, '+', '+')
         writeterm('', '|', '|')
-        writeterm(c.RED+' Please insert' +c.BLUE+' USB Hard drive' +c.RED+' and' +c.GREEN+' Camera SD' +c.RED +'  '
+        writeterm(c.RED+' Please insert' +c.BLUE+' USB Hard drive' +c.RED+' and' +c.GREEN+' Camera SD' +c.RED
                         +'.'*(ii%4+1), '|','|')
         writeterm('', '|', '|')
         writeterm("-"*cols, '+', '+')
