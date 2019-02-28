@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[11]:
+# In[ ]:
 
 
 #!/bin/bash
@@ -11,13 +11,8 @@ while true; do python3 $0 "${@}"; sleep 0.1; done
 " """
 
 #requirements psutils termcolor tqdm
-#apt-get install ntfs-3g
-#
-# TODO list: 
-# 1) double storage of filelogger (maybe on rasberry)
+#apt-get install ntfs-3g gnome-terminal
 
-
-#gnome-terminal --full-screen on startup
 import drive_utils
 import termwriter 
 import filelogger
@@ -36,10 +31,10 @@ if misc.jupyter_mode():
     tqdm.monitor_interval = 0
     get_ipython().run_line_magic('reload_ext', 'autoreload')
     get_ipython().run_line_magic('autoreload', '2')
-    misc.save_jupyter_as_py('media-copier.ipynb')
+    misc.save_jupyter_as_bash('media-copier.ipynb')
 
 
-# In[2]:
+# In[ ]:
 
 
 vid_ext = misc.get_video_ext()
@@ -56,9 +51,9 @@ for ii in range(1000):
     #--------------------------------------------------------
     #Get all the drive logic ready
     drives = drive_utils.get_drives()
-    hdd = None
 
     #Use largest USB drive as harddrive
+    hdd = None
     for drive in drives:
         if drive_utils.is_usb_drive(drive.device):
             if hdd is None:
@@ -69,8 +64,8 @@ for ii in range(1000):
     #Use smaller USB drive as SSD
     ssd = None
     for i in drives:
-        if (drive_utils.is_usb_drive(i.device)
-            and not i==hdd):
+        if (drive_utils.is_usb_drive(i.device) and
+            not i==hdd):
             ssd = i
     
     #--------------------------------------------------------

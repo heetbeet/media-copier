@@ -1,0 +1,42 @@
+#!/bin/bash
+""" " 2>/dev/null 
+#------------------------
+#bash part of this script
+#------------------------
+pip3 install psutils
+pip3 install termcolor
+pip3 install tqdm
+sudo apt-get update 
+sudo apt-get install ntfs-3g
+sudo apt-get install gnome-terminal
+
+python3 $0 "${@}"; exit;
+" """
+
+#------------------------
+#python part of script
+#------------------------
+import os
+import stat
+
+#Find the program executable
+thisdir = os.path.split(os.path.abspath(__file__))[0]
+progexec = os.path.join(thisdir, 'media-copier')
+
+#chmod +x 
+st = os.stat(progexec)
+os.chmod(progexec, st.st_mode | stat.S_IEXEC)
+
+#Add startup "icon" for full gui
+with open('/etc/xdg/autostart/media-copier.desktop', 'w') as f:
+    f.write('''
+    [Desktop Entry]
+    Type=Application
+    Name=Media-copier
+    Comment=Auto-copy from sd card to external harddrive
+    NoDisplay=false
+    Exec=/usr/bin/gnome-terminal --full-screen -x bash -c '%s'
+    NotShowIn=GNOME;KDE;XFCE;
+    '''%progexec
+    )
+
