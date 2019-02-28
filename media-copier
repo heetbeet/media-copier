@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 #!/bin/bash
@@ -152,6 +152,7 @@ while(1):
 
 
         t = tqdm(total=ssd.size_used, file=sysout, unit='B', unit_scale=True)
+        t_progress = 0
         #force full path with trailing /
         sd_base = os.path.abspath(os.path.join(ssd.mountpoint,''))
         totsize = 0
@@ -175,7 +176,9 @@ while(1):
                             filecount.vidfiles += 1
                             filecount.vidsize  += attrs.size
 
+                t_progress += attrs.size
                 t.update(attrs.size)
+        t.update(ssd.size_used - t_progress) #if not 100% yet
         t.close()
         printterm('\r', end='')
 
@@ -244,4 +247,10 @@ while(1):
 
         
     time.sleep(0.5)
+
+
+# In[ ]:
+
+
+help(tqdm)
 
