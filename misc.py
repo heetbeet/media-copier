@@ -22,7 +22,7 @@ class dotdict(dict):
     def __init__(self, **kwds):
         self.update(kwds)
         self.__dict__ = self
-        
+
 def systxt(cmd, **kwargs):
     r"""Wrapper over subprocess.call; run a terminal command and get the 
     results as a string.

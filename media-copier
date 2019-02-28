@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[42]:
 
 
 #!/bin/bash
@@ -21,7 +21,7 @@ import copier
 from termwriter import *
 
 import os
-from termcolor import colored as col
+#from termcolor import colored as col
 from tqdm import tqdm
 import shutil
 import time
@@ -34,7 +34,7 @@ if misc.jupyter_mode():
     misc.save_jupyter_as_bash('media-copier.ipynb')
 
 
-# In[ ]:
+# In[53]:
 
 
 vid_ext = misc.get_video_ext()
@@ -77,42 +77,38 @@ for ii in range(1000):
     
     #--------------------------------------------------------
     # Crude color display
+    c = coldict
+    #HEADER OKBLUE OKGREEN WARNING FAIL ENDC BOLD UNDERLINE
+    
     termwriter.cls()
     cols, lines = shutil.get_terminal_size((80, 20))
     if not (hdd and ssd):
-        printterm(col('+'+"-"*(cols-2)+'+', "red"))
-        printterm(col(pline('', '|','|'), "red"))
-
-        printterm(
-            (col('| Please insert ', 'red') + 
-             col('USB Hard drive ', 'cyan') + 
-             col('and ', 'red') + 
-             col('camera SSD ', 'green') +
-             col('-\|/'[ii%4], 'red') +
-             ' '*cols
-            )[:cols+9*5-1] + col('|', 'red')
-        )
-
-        printterm(col(pline('', '|','|'), "red"))
-        printterm(col('+'+"-"*(cols-2)+'+', "red"))
+        printterm(c.RED, end='')
+        writeterm("-"*cols, '+', '+')
+        writeterm('', '|', '|')
+        writeterm(c.RED+' Please insert' +c.BLUE+' USB Hard drive' +c.RED+' and' +c.GREEN+' Camera SD' +c.RED +'  '
+                        +'.'*(ii%4+1), '|','|')
+        writeterm('', '|', '|')
+        writeterm("-"*cols, '+', '+')
+        printterm(c.END, end='')
 
     else:
         #--------------------------------------------------------
         # Copy from SSD to hard-drive
-        printterm(col('+'+"-"*(cols-2)+'+', "green"))
-        printterm(col(pline(' ---- Copy from: ----', '|','|'), "green"))
-        printterm(col(pline('   '+ssd.mountpoint, '|','|'), "green"))
-        printterm(col(pline("    free:  %d GB"% (ssd.size_free //(2**30)), '|','|'), 'green'))
-        printterm(col(pline("    total: %d GB"%(ssd.size_total//(2**30)), '|','|'), 'green'))
-        printterm(col('+'+"-"*(cols-2)+'+', "green"))
-        
-        #printterm(col('+'+"-"*(cols-2)+'+', "cyan"))
-        printterm(col(pline(' ---- Copy to: ----', '|','|'), "cyan"))
-        printterm(col(pline('   '+hdd.mountpoint, '|','|'), "cyan"))
-        printterm(col(pline("     free:  %d GB"% (hdd.size_free //(2**30)), '|','|'), 'cyan'))
-        printterm(col(pline("     total: %d GB"%(hdd.size_total//(2**30)), '|','|'), 'cyan'))
-        printterm(col('+'+"-"*(cols-2)+'+', "cyan"))
-        
+        printterm(c.BLUE, end='')
+        writeterm("-"*cols, '+', '+')
+        writeterm(' ---- Copy from: ----', '|','|')
+        writeterm('   '+ssd.mountpoint, '|','|')
+        writeterm("    free:  %d GB"% (ssd.size_free //(2**30)), '|','|')
+        writeterm("    total: %d GB"%(ssd.size_total//(2**30)), '|','|')
+        writeterm("-"*cols, '+', '+')
+        printterm(c.GREEN, end='')
+        writeterm(' ---- Copy to: ----', '|','|')
+        writeterm('   '+hdd.mountpoint, '|','|')
+        writeterm("     free:  %d GB"% (hdd.size_free //(2**30)), '|','|')
+        writeterm("     total: %d GB"%(hdd.size_total//(2**30)), '|','|')
+        writeterm("-"*cols, '+', '+')
+        printterm(c.END, end='')
         
         #Do not copy if the routine is already finished
         if status.terminated:
@@ -152,7 +148,8 @@ for ii in range(1000):
 
 
         t = tqdm(total=ssd.size_used, file=sysout, unit='B', unit_scale=True)
-        sd_base = os.path.abspath(ssd.mountpoint)
+        #force full path with trailing /
+        sd_base = os.path.abspath(os.path.join(ssd.mountpoint,''))
         totsize = 0
         filecount = misc.dotdict(files=0, size=0, vidfiles=0, vidsize=0)
         
