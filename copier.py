@@ -141,7 +141,6 @@ def copy_with_progress(src_file,
     if do_md5:
         keeps.md5 = hashlib.md5()
         chunk_size -= chunk_size%keeps.md5.block_size #nearest div
-    
 
     with open(src_file, 'rb') as f_src:
         with open(dest_file, 'wb') as f_dest:

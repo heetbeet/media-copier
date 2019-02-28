@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[54]:
+# In[1]:
 
 
 #!/bin/bash
@@ -9,6 +9,9 @@
 # Run python in inf loop
 while true; do python3 $0 "${@}"; sleep 0.1; done
 " """
+COUNTDOWN = 10
+DO_DELETE = False
+DO_MD5_CHECK = False
 
 #requirements psutils termcolor tqdm
 #apt-get install ntfs-3g gnome-terminal
@@ -34,7 +37,7 @@ if misc.jupyter_mode():
     misc.save_jupyter_as_bash('media-copier.ipynb')
 
 
-# In[56]:
+# In[ ]:
 
 
 vid_ext = misc.get_video_ext()
@@ -44,7 +47,6 @@ status = misc.dotdict(
     terminated = False,
     uncopied = 0)
 
-countdown    = 1
 
 ii=-1
 while(1):
@@ -126,9 +128,9 @@ while(1):
         #--------------------------------------------------------
         # Wait 20 second
         printterm()
-        if (time.time()-start) < countdown:
+        if (time.time()-start) < COUNTDOWN:
             printterm(' %d s left to cancel (plug out device)...'%(
-                countdown - (time.time()-start)))
+                COUNTDOWN - (time.time()-start)))
             continue
             
         #--------------------------------------------------------
@@ -217,13 +219,21 @@ while(1):
                 os.makedirs(dest_dir)
 
             keeps = misc.dotdict()
-            for chunksz in copier.copy_with_progress(src, dest, keeps=keeps):
+            for chunksz in copier.copy_with_progress(src, dest,
+                                                     do_md5=DO_MD5_CHECK,
+                                                     keeps=keeps):
                 t.update(chunksz)
 
+            safe = (copier.hash_equals(keeps.md5, copier.hash_file(dest))
+                    if DO_MD5_CHECK else 
+                    os.stat(src).st_size == os.stat(dest).st_size)
 
-            if copier.hash_equals(keeps.md5, copier.hash_file(dest)):
+            if safe:
                 filelogger.update_fileregister(hdd_dir, attrs)
-                
+                if DO_DELETE:
+                    try:
+                        os.remove(src)
+                    except: pass
 
         t.close()
         printterm('\r', end='')
