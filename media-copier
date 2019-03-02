@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[2]:
 
 
 #!/bin/bash
@@ -43,11 +43,11 @@ if misc.jupyter_mode():
 
 vid_ext, img_ext = misc.get_video_image_ext()
 poll = drive_utils.drivePollster()
+bar_format = '{desc}: {percentage:3.0f}%|{bar}| {elapsed}<{remaining}, {rate_fmt}'
 
 status = misc.dotdict(
-    terminated = False,
+    terminated = 0,
     uncopied = 0)
-
 
 ii=-1
 while(1):
@@ -76,7 +76,7 @@ while(1):
     #--------------------------------------------------------
     #Triggers: when devices are plugged in/out
     if poll.did_change() or ii==0: 
-        status.terminated = False
+        status.terminated = 0
         status.uncopied = 0
         start = time.time()
     
@@ -114,8 +114,8 @@ while(1):
         writeterm("-"*cols, '+', '+')
         printterm(c.END, end='')
         
-        #Do not copy if the routine is already finished
-        if status.terminated:
+        #Do not copy if the routine is run twiced
+        if status.terminated == 2:
             printterm()
             if status.uncopied > 0:
                 printterm("SD card %.3fGB uncopied! Drive too full!"%(status.uncopied/2**30))
@@ -147,7 +147,8 @@ while(1):
 
 
         t = tqdm(total=sum(i.size_used for i in ssd_list),
-                 file=sysout, unit='B', unit_scale=True)
+                 file=sysout, unit='B', unit_scale=True,
+                 bar_format=bar_format)
         t_progress = 0
         totsize = 0
         filecount = misc.dotdict(files=0, size=0, vidfiles=0, vidsize=0,
@@ -212,7 +213,8 @@ while(1):
                                        ssd.size_total/(2**30)))
         
         i=0
-        t = tqdm(total=filecount.size, file=sysout, unit='B', unit_scale=True)
+        t = tqdm(total=filecount.size, file=sysout, unit='B', unit_scale=True,
+                bar_format=bar_format)
         for key, attrs in newregister.items():
             i+=1
 
@@ -257,10 +259,11 @@ while(1):
         t.close()
         printterm('\r', end='')
         
-        for ssd in ssd_list:
-            misc.unmount(ssd)
+        #Unmounting is just not worth it
+        #for ssd in ssd_list:
+        #    misc.unmount(ssd)
             
-        status.terminated = True
+        status.terminated +=1
 
     time.sleep(0.5)
 
