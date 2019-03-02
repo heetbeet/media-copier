@@ -113,8 +113,8 @@ def get_video_image_ext():
         
     return vid_ext, img_ext 
 
-def unmount(device):
-    systxt(['udisks', '--unmount', device.device])
+#def unmount(device):
+#    systxt(['udisks', '--unmount', device.device])
 
 def save_jupyter_as_bash(filename, outfilename=None):
     if filename[-6:].lower() != '.ipynb':

@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[2]:
+# In[ ]:
 
 
 #!/bin/bash
@@ -171,11 +171,11 @@ while(1):
                             filecount.files += 1
                             filecount.size  += attrs.size
 
-                            if os.path.splitext(attrs.path)[-1] in vid_ext:
+                            if os.path.splitext(attrs.path)[-1].lower() in vid_ext:
                                 filecount.vidfiles += 1
                                 filecount.vidsize  += attrs.size
 
-                            if os.path.splitext(attrs.path)[-1] in img_ext:
+                            if os.path.splitext(attrs.path)[-1].lower() in img_ext:
                                 filecount.imgfiles += 1
                                 filecount.imgsize  += attrs.size
 
