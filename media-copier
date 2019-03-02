@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[4]:
+# In[5]:
 
 
 #!/bin/bash
@@ -207,7 +207,7 @@ while(1):
         printterm()
 
         for ssd in ssd_list:
-            mountname = os.path.split(ssd.mountpoint)[-1]
+            mountname = os.path.split(os.path.dirname(ssd.mountpoint))[-1]
             ssd.inf.out_dir = os.path.join(hdd_dir,
                                     datetime.now().strftime('%Y%m%d-')+
                                     mountname+'-'+
