@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 #!/bin/bash
@@ -213,7 +213,7 @@ while(1):
                                        ssd.size_total/(2**30)))
         
         i=0
-        t = tqdm(total=filecount.size, file=sysout, unit='B', unit_scale=True,
+        t = tqdm(total=filecount.size+1e-9, file=sysout, unit='B', unit_scale=True,
                 bar_format=bar_format)
         for key, attrs in newregister.items():
             i+=1
