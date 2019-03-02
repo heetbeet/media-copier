@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[2]:
 
 
 #!/bin/bash
@@ -146,7 +146,7 @@ while(1):
         newregister = {}
 
 
-        t = tqdm(total=sum(i.size_used for i in ssd_list),
+        t = tqdm(total=sum(i.size_used for i in ssd_list)+1e-16,
                  file=sysout, unit='B', unit_scale=True,
                  bar_format=bar_format)
         t_progress = 0
@@ -189,7 +189,7 @@ while(1):
         
         printterm('Uncopied videos %.2fGB; %d files.'%(filecount.vidsize/2**30, filecount.vidfiles))
         printterm('Uncopied images %.2fGB; %d files.'%(filecount.imgsize/2**30, filecount.imgfiles))
-        printterm('Uncopied all files %.2fGB; %d files.'%(filecount.size/2**30, filecount.files))
+        printterm('Uncopied tot files %.2fGB; %d files.'%(filecount.size/2**30, filecount.files))
         
         #Determine max space that can be occupied
         if filecount.size > available_space:
@@ -213,7 +213,7 @@ while(1):
                                        ssd.size_total/(2**30)))
         
         i=0
-        t = tqdm(total=filecount.size+1e-9, file=sysout, unit='B', unit_scale=True,
+        t = tqdm(total=filecount.size+1e-16, file=sysout, unit='B', unit_scale=True,
                 bar_format=bar_format)
         for key, attrs in newregister.items():
             i+=1
