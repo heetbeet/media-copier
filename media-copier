@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[9]:
+# In[2]:
 
 
 #!/bin/bash
@@ -38,7 +38,7 @@ if misc.jupyter_mode():
     misc.save_jupyter_as_bash('media-copier.ipynb')
 
 
-# In[ ]:
+# In[3]:
 
 
 vid_ext, img_ext = misc.get_video_image_ext()
