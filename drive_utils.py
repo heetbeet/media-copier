@@ -18,7 +18,6 @@ def is_usb_drive(sbx):
     str_out = systxt(['find', '/dev/disk/by-id/', '-lname', '*'+sbx])
     return len([i for i in str_out.replace('/',' ').split() if i.startswith('usb-')]) > 0 
 
-
 def drive_id(sbx):
     """Get the ID of a drive.
     

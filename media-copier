@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[44]:
 
 
 #!/bin/bash
@@ -12,6 +12,7 @@ while true; do python3 $0 "${@}"; sleep 0.1; done
 COUNTDOWN = 10
 DO_DELETE = False
 DO_MD5_CHECK = False
+HD_LARGER_THAN_THIS_GB = 400
 
 #requirements psutils termcolor tqdm
 #apt-get install ntfs-3g gnome-terminal
@@ -37,10 +38,10 @@ if misc.jupyter_mode():
     misc.save_jupyter_as_bash('media-copier.ipynb')
 
 
-# In[ ]:
+# In[47]:
 
 
-vid_ext = misc.get_video_ext()
+vid_ext, img_ext = misc.get_video_image_ext()
 poll = drive_utils.drivePollster()
 
 status = misc.dotdict(
@@ -60,17 +61,17 @@ while(1):
     hdd = None
     for drive in drives:
         if drive_utils.is_usb_drive(drive.device):
-            if hdd is None:
-                hdd = drive
-            elif drive.size_total > hdd.size_total:
+            if drive.size_total > HD_LARGER_THAN_THIS_GB*(2**30):
                 hdd = drive
 
     #Use smaller USB drive as SSD
-    ssd = None
+    ssd_list = []
     for i in drives:
-        if (drive_utils.is_usb_drive(i.device) and
-            not i==hdd):
-            ssd = i
+        if drive.size_total <= HD_LARGER_THAN_THIS_GB*(2**30):
+            ssd_list.append(drive)
+            
+            #lets use this for some additional info
+            ssd_list[-1].inf = misc.dotdict()
     
     #--------------------------------------------------------
     #Triggers: when devices are plugged in/out
@@ -86,7 +87,7 @@ while(1):
     
     termwriter.cls()
     cols, lines = shutil.get_terminal_size((80, 20))
-    if not (hdd and ssd):
+    if not (hdd and len(ssd_list)):
         printterm(c.RED, end='')
         writeterm("-"*cols, '+', '+')
         writeterm('', '|', '|')
@@ -100,17 +101,16 @@ while(1):
         #--------------------------------------------------------
         # Copy from SSD to hard-drive
         printterm(c.BLUE, end='')
-        writeterm("-"*cols, '+', '+')
-        writeterm(' ---- Copy from: ----', '|','|')
-        writeterm('   '+ssd.mountpoint, '|','|')
-        writeterm("    free:  %d GB"% (ssd.size_free //(2**30)), '|','|')
-        writeterm("    total: %d GB"%(ssd.size_total//(2**30)), '|','|')
-        writeterm("-"*cols, '+', '+')
+        writeterm("----- Copy From "+'-'*cols, '+', '+')
+        for ssd in ssd_list:
+            writeterm('   '+ssd.mountpoint, '|','|')
+            writeterm("    used:  %.1f GB"% (ssd.size_used //(2**30)), '|','|')
+        #writeterm("-"*cols, '+', '+')
         printterm(c.GREEN, end='')
-        writeterm(' ---- Copy to: ----', '|','|')
+        writeterm("----- Copy To "+'-'*cols, '+', '+')
         writeterm('   '+hdd.mountpoint, '|','|')
-        writeterm("     free:  %d GB"% (hdd.size_free //(2**30)), '|','|')
-        writeterm("     total: %d GB"%(hdd.size_total//(2**30)), '|','|')
+        writeterm("     free:  %.1f GB"% (hdd.size_free //(2**30)), '|','|')
+        writeterm("     total: %.1f GB"%(hdd.size_total//(2**30)), '|','|')
         writeterm("-"*cols, '+', '+')
         printterm(c.END, end='')
         
@@ -139,11 +139,6 @@ while(1):
 
         hdd_dir = os.path.join(hdd.mountpoint, 'SD_autobackup')
 
-        out_dir = os.path.join(hdd_dir,
-                               datetime.now().strftime('%Y%m%d-')+
-                               copier.get_valid_filename(ssd.id)+'--%.1fGB'%(
-                                   ssd.size_total/(2**30)))
-
 
         os.makedirs(hdd_dir, exist_ok=True)
 
@@ -151,41 +146,49 @@ while(1):
         newregister = {}
 
 
-        t = tqdm(total=ssd.size_used, file=sysout, unit='B', unit_scale=True)
+        t = tqdm(total=sum(i.size_used for i in ssd_list),
+                 file=sysout, unit='B', unit_scale=True)
         t_progress = 0
-        #force full path with trailing /
-        sd_base = os.path.abspath(os.path.join(ssd.mountpoint,''))
         totsize = 0
-        filecount = misc.dotdict(files=0, size=0, vidfiles=0, vidsize=0)
-        
-        for _, dirs, files in os.walk(sd_base, followlinks=False):
-            for file in files:
-                fpath = os.path.join(_, file)
-                try:
-                    key, attrs = filelogger.to_register(fpath)
-                except FileNotFoundError:
-                    pass
-                    #print('File not found ', fpath)
-                else:
-                    if key not in fileregister:
-                        newregister[key] = attrs
+        filecount = misc.dotdict(files=0, size=0, vidfiles=0, vidsize=0,
+                                                  imgfiles=0, imgsize=0)
+        for ssd in ssd_list:
+            #force full path with trailing /
+            ssd.inf.abspath = os.path.abspath(os.path.join(ssd.mountpoint,''))
+            for _, dirs, files in os.walk(ssd.inf.abspath, followlinks=False):
+                for file in files:
+                    fpath = os.path.join(_, file)
+                    try:
+                        key, attrs = filelogger.to_register(fpath)
+                    except FileNotFoundError:
+                        pass
+                        #print('File not found ', fpath)
+                    else:
+                        if key not in fileregister:
+                            newregister[key] = attrs
 
-                        filecount.files += 1
-                        filecount.size  += attrs.size
-                        if os.path.splitext(attrs.path)[-1] in vid_ext:
-                            filecount.vidfiles += 1
-                            filecount.vidsize  += attrs.size
+                            filecount.files += 1
+                            filecount.size  += attrs.size
 
-                t_progress += attrs.size
-                t.update(attrs.size)
-        t.update(ssd.size_used - t_progress) #if not 100% yet
+                            if os.path.splitext(attrs.path)[-1] in vid_ext:
+                                filecount.vidfiles += 1
+                                filecount.vidsize  += attrs.size
+
+                            if os.path.splitext(attrs.path)[-1] in img_ext:
+                                filecount.imgfiles += 1
+                                filecount.imgsize  += attrs.size
+
+                    t_progress += attrs.size
+                    t.update(attrs.size)
+            t.update(sum(i.size_used for i in ssd_list) - t_progress) #if not 100% yet
         t.close()
         printterm('\r', end='')
 
-        available_space = hdd.size_free*0.9999 #leave 100kB tolerance for every 1GB
+        available_space = hdd.size_free*0.9999 #leave 100kB tolerance / GB
         
         printterm('Uncopied videos %.2fGB; %d files.'%(filecount.vidsize/2**30, filecount.vidfiles))
-        printterm('Uncopied others %.2fGB; %d files.'%(filecount.size/2**30, filecount.files))
+        printterm('Uncopied images %.2fGB; %d files.'%(filecount.imgsize/2**30, filecount.imgfiles))
+        printterm('Uncopied all files %.2fGB; %d files.'%(filecount.size/2**30, filecount.files))
         
         #Determine max space that can be occupied
         if filecount.size > available_space:
@@ -202,6 +205,12 @@ while(1):
             
         printterm()
 
+        for ssd in ssd_list:
+            ssd.inf.out_dir = os.path.join(hdd_dir,
+                                    datetime.now().strftime('%Y%m%d-')+
+                                    copier.get_valid_filename(ssd.id)+'--%.1fGB'%(
+                                       ssd.size_total/(2**30)))
+        
         i=0
         t = tqdm(total=filecount.size, file=sysout, unit='B', unit_scale=True)
         for key, attrs in newregister.items():
@@ -210,25 +219,32 @@ while(1):
             src = attrs.path
                 
             available_space -= attrs.size
-            if available_space<0:
+            #once triggered, always triggered :)
+            if available_space<0: 
                 status.uncopied += attrs.size
                 continue
 
-            # path.join breaks think it happens with files starting with a dot
-            dest = os.path.abspath(out_dir +'/'+src[len(sd_base):])
+            #From which sd card is this file???
+            for i in ssd_list:
+                if os.path.abspath(src).startswith(ssd.inf.abspath):
+                    ssd = i
+                    break
+
+            # +'/'+ is alternative to path.join; otherwise it breaks on filenames starting with '.'
+            dest = os.path.abspath(ssd.inf.out_dir +'/'+ src[len(ssd.inf.abspath):])
             dest_dir = os.path.dirname(dest)
+
 
             if not os.path.isdir(dest_dir):
                 os.makedirs(dest_dir)
 
             keeps = misc.dotdict()
-            for chunksz in copier.copy_with_progress(src, dest,
+            for chunk_sz in copier.copy_with_progress(src, dest,
                                                      do_md5=DO_MD5_CHECK,
                                                      keeps=keeps):
-                t.update(chunksz)
+                t.update(chunk_sz)
 
-            safe = (copier.hash_equals(keeps.md5, copier.hash_file(dest))
-                    if DO_MD5_CHECK else 
+            safe = (copier.hash_equals(keeps.md5, copier.hash_file(dest)) if DO_MD5_CHECK else 
                     os.stat(src).st_size == os.stat(dest).st_size)
 
             if safe:
@@ -241,16 +257,10 @@ while(1):
         t.close()
         printterm('\r', end='')
         
-        #misc.systxt(['eject', hdd.mountpoint])
-        #misc.systxt(['eject', ssd.mountpoint])
+        for ssd in ssd_list:
+            unmount(ssd)
+            
         status.terminated = True
 
-        
     time.sleep(0.5)
-
-
-# In[ ]:
-
-
-help(tqdm)
 

@@ -62,21 +62,29 @@ def jupyter_mode():
     return not hasattr(main, '__file__')
 
 
-def get_video_ext():
-    """A list of video file extensions updated from wikipedia.org/wiki/Video_file_format and
-    wikipedia.org/wiki/Comparison_of_video_container_formats retrieved on 2019-02-27
+def get_video_image_ext():
+    """A list of video file extensions and raster image file extensions from 
+    wikipedia.org/wiki/Video_file_format, wikipedia.org/wiki/Comparison_of_video_container_formats,
+    and https://github.com/DavidAnson/ConvertTo-Jpeg retrieved on 2019-02-27
     
     Returns
     -------
-    set
+    (set
         Video file extensions both with dots and without (".avi" and "avi")
+     set
+         Video file extensions both with dots and without (".avi" and "avi")
+    )
         
     Examples
     --------
-    >>> exts = get_video_ext()
-    >>> 'mp4' in exts
+    >>> vid_exts, img_exts = get_video_image_ext()
+    >>> 'mp4' in vid_exts
     True
-    >>> '.mp4' in exts
+    >>> '.mp4' in vid_exts
+    True
+    >>> 'jpg' in img_exts
+    True
+    >>> '.jpg' in img_exts
     True
     """
     
@@ -90,7 +98,24 @@ def get_video_ext():
     for i in [i for i in vid_ext]: #noqa
         vid_ext.add('.'+i)
         
-    return vid_ext
+    img_ext = {'heic', 'heif', '.bmp', '.dib', '.rle', '.cur', '.dds', '.dng',
+               '.gif', '.ico', '.icon', '.exif', '.jfif', '.jpe', '.jpeg', '.jpg',
+               '.arw', '.cr2', '.crw', '.dng', '.erf', '.kdc', '.mrw', '.nef', '.nrw',
+               '.orf', '.pef', '.raf', '.raw', '.rw2', '.rwl', '.sr2', '.srw', '.avci',
+               '.avcs', '.heic', '.heics', '.heif', '.heifs', '.webp', '.png', '.tif',
+               '.tiff', '.jxr', '.wdp'}
+    
+    for i in [i for i in img_ext]: #noqa
+        if i.startswith('.'):
+            img_ext.add(i[1:])
+        else:
+            img_ext.add('.'+i)
+        
+    return vid_ext, img_ext 
+
+
+def unmount(device):
+    misc.systxt(['umount', device.device])
 
 def save_jupyter_as_bash(filename, outfilename=None):
     if filename[-6:].lower() != '.ipynb':
