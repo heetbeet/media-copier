@@ -113,7 +113,6 @@ def get_video_image_ext():
         
     return vid_ext, img_ext 
 
-
 def unmount(device):
     misc.systxt(['umount', device.device])
 

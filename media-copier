@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[44]:
+# In[1]:
 
 
 #!/bin/bash
@@ -38,7 +38,7 @@ if misc.jupyter_mode():
     misc.save_jupyter_as_bash('media-copier.ipynb')
 
 
-# In[47]:
+# In[ ]:
 
 
 vid_ext, img_ext = misc.get_video_image_ext()
@@ -67,7 +67,7 @@ while(1):
     #Use smaller USB drive as SSD
     ssd_list = []
     for i in drives:
-        if drive.size_total <= HD_LARGER_THAN_THIS_GB*(2**30):
+        if i.size_total <= HD_LARGER_THAN_THIS_GB*(2**30):
             ssd_list.append(drive)
             
             #lets use this for some additional info
@@ -258,7 +258,7 @@ while(1):
         printterm('\r', end='')
         
         for ssd in ssd_list:
-            unmount(ssd)
+            misc.unmount(ssd)
             
         status.terminated = True
 
