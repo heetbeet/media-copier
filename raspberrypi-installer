@@ -13,6 +13,7 @@ sudo apt-get install exfat-fuse
 sudo apt-get install exfat-utils
 sudo apt-get install gnome-terminal
 sudo apt-get install mount
+sudo apt-get install udisks
 
 sudo python3 $0 "${@}"; exit;
 

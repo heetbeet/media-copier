@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[3]:
+# In[25]:
 
 
 #!/bin/bash
@@ -38,7 +38,7 @@ if misc.jupyter_mode():
     misc.save_jupyter_as_bash('media-copier.ipynb')
 
 
-# In[4]:
+# In[ ]:
 
 
 vid_ext, img_ext = misc.get_video_image_ext()
@@ -66,12 +66,12 @@ while(1):
 
     #Use smaller USB drive as SSD
     ssd_list = []
-    for i in drives:
-        if i.size_total <= HD_LARGER_THAN_THIS_GB*(2**30):
-            ssd_list.append(drive)
-            
-            #lets use this for some additional info
-            ssd_list[-1].inf = misc.dotdict()
+    for drive in drives:
+        if drive_utils.is_usb_drive(drive.device):
+            if drive.size_total <= HD_LARGER_THAN_THIS_GB*(2**30):
+                ssd_list.append(drive)
+                #lets use this for some additional info
+                ssd_list[-1].inf = misc.dotdict()
     
     #--------------------------------------------------------
     #Triggers: when devices are plugged in/out
@@ -104,13 +104,13 @@ while(1):
         writeterm("----- Copy From "+'-'*cols, '+', '+')
         for ssd in ssd_list:
             writeterm('   '+ssd.mountpoint, '|','|')
-            writeterm("    used:  %.1f GB"% (ssd.size_used //(2**30)), '|','|')
+            writeterm("     used: %.1f GB"%(ssd.size_used/(2**30)), '|','|')
         #writeterm("-"*cols, '+', '+')
         printterm(c.GREEN, end='')
         writeterm("----- Copy To "+'-'*cols, '+', '+')
         writeterm('   '+hdd.mountpoint, '|','|')
-        writeterm("     free:  %.1f GB"% (hdd.size_free //(2**30)), '|','|')
-        writeterm("     total: %.1f GB"%(hdd.size_total//(2**30)), '|','|')
+        writeterm("     free:  %.1f GB"%(hdd.size_free/(2**30)), '|','|')
+        writeterm("     (tot:  %.1f GB)"%(hdd.size_total/(2**30)), '|','|')
         writeterm("-"*cols, '+', '+')
         printterm(c.END, end='')
         
@@ -225,9 +225,9 @@ while(1):
                 continue
 
             #From which sd card is this file???
-            for i in ssd_list:
+            for s in ssd_list:
                 if os.path.abspath(src).startswith(ssd.inf.abspath):
-                    ssd = i
+                    ssd = s
                     break
 
             # +'/'+ is alternative to path.join; otherwise it breaks on filenames starting with '.'
@@ -265,8 +265,20 @@ while(1):
     time.sleep(0.5)
 
 
-# In[5]:
+# In[23]:
 
 
-misc.unmount
+misc.systxt('umount '+ssd.)
+
+
+# In[24]:
+
+
+get_ipython().system('udisks --unmount /dev/sdd')
+
+
+# In[27]:
+
+
+misc.unmount(ssd)
 
