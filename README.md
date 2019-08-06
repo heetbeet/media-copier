@@ -1,2 +1,2 @@
 # media-copier
-Copies media from a SD card to a external harddrive automatically
+A system to copy media automatically from an SD card to a external harddrive. Written for the Raspberry Pi.
